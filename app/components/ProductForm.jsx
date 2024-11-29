@@ -1,5 +1,5 @@
 import {Link} from '@remix-run/react';
-import {VariantSelector} from '@shopify/hydrogen';
+import {VariantSelector, ShopPayButton} from '@shopify/hydrogen';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {useAside} from '~/components/Aside';
 
@@ -43,6 +43,10 @@ export function ProductForm({product, selectedVariant, variants}) {
       >
         {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
       </AddToCartButton>
+      <ShopPayButton
+        variantIds={[selectedVariant.id]}
+        storeDomain={'https://demostore.mock.shop/'}
+      />
     </div>
   );
 }
