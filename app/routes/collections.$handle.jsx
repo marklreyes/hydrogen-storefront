@@ -1,4 +1,4 @@
-import {defer, redirect} from '@shopify/remix-oxygen';
+import {json, redirect} from '@shopify/remix-oxygen';
 import {useLoaderData, Link} from '@remix-run/react';
 import {
   getPaginationVariables,
@@ -19,22 +19,7 @@ export const meta = ({data}) => {
 /**
  * @param {LoaderFunctionArgs} args
  */
-export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return defer({...deferredData, ...criticalData});
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {LoaderFunctionArgs}
- */
-async function loadCriticalData({context, params, request}) {
+export async function loader({request, params, context}) {
   const {handle} = params;
   const {storefront} = context;
   const paginationVariables = getPaginationVariables(request, {
@@ -42,15 +27,12 @@ async function loadCriticalData({context, params, request}) {
   });
 
   if (!handle) {
-    throw redirect('/collections');
+    return redirect('/collections');
   }
 
-  const [{collection}] = await Promise.all([
-    storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
-      // Add other queries here, so that they are loaded in parallel
-    }),
-  ]);
+  const {collection} = await storefront.query(COLLECTION_QUERY, {
+    variables: {handle, ...paginationVariables},
+  });
 
   if (!collection) {
     throw new Response(`Collection ${handle} not found`, {
@@ -58,20 +40,33 @@ async function loadCriticalData({context, params, request}) {
     });
   }
 
-  return {
-    collection,
-  };
+  // Generate the SEO data for the collection page
+  const seo = generateSEO(collection);
+
+  return json({collection, seo});
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {LoaderFunctionArgs}
- */
-function loadDeferredData({context}) {
-  return {};
-}
+// Function to generate SEO data for the collection page
+const generateSEO = (collection) => {
+  let seo = {
+    title: 'Default Collection Title', // Default title in case the collection doesn't have a title
+    description: 'Default Collection Description', // Default description in case the collection doesn't have a description
+  };
+
+  if (collection) {
+    // If collection has title and description, use them for SEO
+    seo.title = collection.title || seo.title;
+    seo.description = collection.description || seo.description;
+  }
+
+  // Truncate the description to 155 characters if needed
+  seo.description =
+    seo.description.length > 155
+      ? `${seo.description.slice(0, 152)}...`
+      : seo.description;
+
+  return seo;
+};
 
 export default function Collection() {
   /** @type {LoaderReturnData} */
