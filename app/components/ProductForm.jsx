@@ -43,7 +43,7 @@ export function ProductForm({product, selectedVariant, variants}) {
       >
         {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
       </AddToCartButton>
-			&nbsp;
+      &nbsp;
       <ShopPayButton
         variantIds={[selectedVariant.id]}
         storeDomain={'https://demostore.mock.shop/'}
